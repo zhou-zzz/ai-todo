@@ -1,0 +1,35 @@
+{
+  "name": "test",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "dependencies": {
+    "@unocss/reset": "^0.63.6",
+    "openai": "^4.69.0",
+    "uuid": "^11.0.2",
+    "vue": "^3.5.12",
+    "vuedraggable": "^2.24.3"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^3.8.0",
+    "@iconify-json/carbon": "^1.2.4",
+    "@types/node": "^22.8.4",
+    "@unocss/preset-icons": "^0.63.6",
+    "@unocss/preset-uno": "^0.63.6",
+    "@vitejs/plugin-vue": "^5.1.4",
+    "eslint": "^9.13.0",
+    "eslint-plugin-check-file": "^2.8.0",
+    "install": "^0.13.0",
+    "typescript": "~5.6.2",
+    "unocss": "^0.63.6",
+    "vite": "^5.4.10",
+    "vue-tsc": "^2.1.8"
+  }
+}

@@ -1,0 +1,20 @@
+:root {
+  --bg-color: #ffffff;
+  --text-color: #333333;
+}
+
+:root.dark {
+  --bg-color: #1a1a1a;
+  --text-color: #ffffff;
+}
+
+/* 添加过渡效果 */
+.transition {
+  transition: background-color 0.3s ease;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  transition: background-color 0.3s, color 0.3s;
+} 
