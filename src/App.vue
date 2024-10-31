@@ -1,9 +1,10 @@
 <script setup lang="ts">
+import ConfettiExplosion from '@/components/confetti-explosion.vue'
 import ToggleTheme from '@/components/toggle-theme.vue'
 import OpenAI from 'openai'
 import { onMounted, ref, watch } from 'vue'
 
-// 类型定义
+/** 类型定义 */
 interface Step {
   id: number
   content: string
@@ -17,30 +18,32 @@ interface TodoTask {
   date?: string
 }
 
-// OpenAI 类型定义
+/** OpenAI 类型定义 */
 interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant'
   content: string
 }
 
-// 状态定义
+/** 状态定义 */
 const todoInput = ref('')
 const tasks = ref<TodoTask[]>([])
 const isTyping = ref(false)
 const currentDisplayTask = ref<TodoTask | null>(null)
 const selectedTaskId = ref<number | null>(null)
 
-// 添加折叠状态管理
+/** 添加折叠状态管理 */
 const collapsedTasks = ref<Set<number>>(new Set())
 
-// OpenAI 实例
+/** OpenAI 实例 */
 const openai = new OpenAI({
   baseURL: 'https://api.deepseek.com',
   apiKey: import.meta.env.VITE_DEEPSEEK_API_KEY,
   dangerouslyAllowBrowser: true,
 })
 
-// 从 localStorage 加载数据
+const confettiRef = ref<InstanceType<typeof ConfettiExplosion> | null>(null)
+
+/** 从 localStorage 加载数据 */
 onMounted(() => {
   const savedTasks = localStorage.getItem('todo-tasks')
   if (savedTasks) {
@@ -48,12 +51,12 @@ onMounted(() => {
   }
 })
 
-// 监听任务变化并保存到 localStorage
+/** 监听任务变化并保存到 localStorage */
 watch(tasks, (newTasks) => {
   localStorage.setItem('todo-tasks', JSON.stringify(newTasks))
 }, { deep: true })
 
-// 当选中的任务改变时，更新显示的任务
+/** 当选中的任务改变时，更新显示的任务 */
 watch(selectedTaskId, (newId) => {
   if (newId) {
     const task = tasks.value.find(t => t.id === newId)
@@ -66,7 +69,7 @@ watch(selectedTaskId, (newId) => {
   }
 })
 
-// 任务相关方法
+/** 任务相关方法 */
 function addTask() {
   if (!todoInput.value.trim())
     return
@@ -90,7 +93,7 @@ function deleteTask(taskId: number) {
   }
 }
 
-// 步骤相关方法
+/** 步骤相关方法 */
 async function generateSteps(taskId: number) {
   selectedTaskId.value = taskId
   const taskIndex = tasks.value.findIndex(t => t.id === taskId)
@@ -218,15 +221,18 @@ function deleteStep(taskId: number, stepId: number) {
   }
 }
 
-// 添加切换完成状态的方法
-function toggleTaskComplete(taskId: number) {
+/** 添加切换完成状态的方法 */
+function toggleTaskComplete(taskId: number, event: MouseEvent) {
   const task = tasks.value.find(t => t.id === taskId)
   if (task) {
     task.completed = !task.completed
+    if (task.completed && confettiRef.value) {
+      confettiRef.value.explode(event)
+    }
   }
 }
 
-// 切换折叠状态的方法
+/** 切换折叠状态的方法 */
 function toggleCollapse(taskId: number) {
   if (collapsedTasks.value.has(taskId)) {
     collapsedTasks.value.delete(taskId)
@@ -241,11 +247,24 @@ function toggleCollapse(taskId: number) {
   <div
     class="fixed inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-indigo-50
               dark:from-slate-900 dark:via-blue-900 dark:to-purple-900
-              transition-colors duration-75"
+              transition-colors duration-75 animate-gradient"
   >
     <div class="relative w-full h-screen overflow-auto scrollbar-fancy">
       <div class="container mx-auto p-4 max-w-3xl min-h-full">
-        <div class="absolute top-4 right-4">
+        <div class="absolute top-4 right-4 flex items-center gap-2">
+          <!-- GitHub 链接 -->
+          <a
+            href="https://github.com/zhou-zzz/ai-todo"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="p-2 rounded-full transition-all duration-200
+            text-gray-600 hover:text-gray-900
+            dark:text-gray-400 dark:hover:text-gray-200
+            hover:bg-gray-100 dark:hover:bg-gray-800/50"
+            title="查看源码"
+          >
+            <div class="i-carbon-logo-github text-xl" />
+          </a>
           <ToggleTheme />
         </div>
 
@@ -255,7 +274,7 @@ function toggleCollapse(taskId: number) {
                      bg-clip-text text-transparent bg-gradient-to-r
                      from-blue-500 to-purple-500 dark:from-blue-400 dark:to-purple-400"
           >
-            AI待办事清单
+            AI待办事项清单
           </h1>
 
           <!-- 输入区域 -->
@@ -265,12 +284,12 @@ function toggleCollapse(taskId: number) {
               type="text"
               placeholder="输入待办事项..."
               class="w-full sm:flex-1 p-2 sm:p-3 rounded-lg
-                     backdrop-blur-md bg-white/70 dark:bg-slate-800/50
+                     bg-white/90 dark:bg-slate-800/90
                      border-0 dark:text-blue-100
-                     focus:outline-none focus:ring-2
+                     focus:outline-none focus:ring-2 focus:scale-[1.02]
                      focus:ring-blue-500/50 dark:focus:ring-blue-400/50
                      shadow-lg shadow-blue-500/20 dark:shadow-blue-400/10
-                     placeholder:text-gray-400 dark:placeholder:text-blue-200/50
+                     placeholder:text-gray-500 dark:placeholder:text-blue-300/70
                      text-sm sm:text-base transition-all duration-300"
               @keyup.enter="addTask"
             >
@@ -291,137 +310,150 @@ function toggleCollapse(taskId: number) {
           <!-- 任务列表 -->
           <div class="space-y-4 pb-8">
             <div class="space-y-4">
-              <div
-                v-for="task in tasks"
-                :key="task.id"
-                class="p-4 rounded-lg transition-all duration-300 ease-out
-                       backdrop-blur-md bg-white/80 dark:bg-slate-800/40
-                       border border-transparent
-                       hover:border-blue-500/20 dark:hover:border-blue-500/30
-                       shadow-sm hover:shadow-md
-                       dark:shadow-blue-500/10 dark:hover:shadow-blue-500/20"
+              <TransitionGroup
+                name="task-list"
+                tag="div"
+                class="space-y-4"
               >
-                <div class="flex items-center justify-between gap-4">
-                  <div class="flex items-center gap-3 min-w-0">
-                    <button
-                      class="flex-shrink-0 w-5 h-5 rounded border-2
-                             transition-colors duration-200
-                             flex items-center justify-center"
-                      :class="[
-                        task.completed
-                          ? 'bg-blue-500 border-blue-500 dark:bg-blue-400 dark:border-blue-400'
-                          : 'border-gray-300 dark:border-gray-600',
-                      ]"
-                      @click="toggleTaskComplete(task.id)"
-                    >
-                      <div
-                        v-if="task.completed"
-                        class="i-carbon-checkmark text-white text-sm"
-                      />
-                    </button>
-                    <span
-                      class="text-sm sm:text-base truncate dark:text-blue-100
-                              transition-colors duration-200"
-                      :class="{ 'line-through text-gray-400 dark:text-gray-500': task.completed }"
-                    >
-                      {{ task.content }}
-                    </span>
-                  </div>
-
-                  <div class="flex items-center gap-2">
-                    <button
-                      v-if="task.steps.length > 0"
-                      class="p-1.5 rounded-full transition-all duration-200
-                             text-blue-500 hover:text-blue-600
-                             dark:text-blue-400 dark:hover:text-blue-300
-                             hover:bg-blue-50 dark:hover:bg-blue-900/30"
-                      @click="toggleCollapse(task.id)"
-                    >
-                      <div
-                        class="text-lg" :class="[
-                          collapsedTasks.has(task.id)
-                            ? 'i-carbon-chevron-down'
-                            : 'i-carbon-chevron-up',
-                        ]"
-                      />
-                    </button>
-                    <button
-                      v-if="!task.steps.length"
-                      class="p-1.5 rounded-full transition-all duration-200"
-                      :disabled="isTyping"
-                      :title="isTyping ? '生成中...' : '生成步骤'"
-                      @click="generateSteps(task.id)"
-                    >
-                      <div
-                        class="i-carbon-list-checked text-lg"
-                        :class="{ 'animate-spin': isTyping }"
-                      />
-                    </button>
-                    <button
-                      class="p-1.5 rounded-full transition-all duration-200"
-                      @click="deleteTask(task.id)"
-                    >
-                      <div class="i-carbon-trash-can text-lg" />
-                    </button>
-                  </div>
-                </div>
-
-                <!-- 任务步骤 -->
                 <div
-                  v-if="task.steps.length > 0"
-                  class="mt-4 ml-8"
+                  v-for="task in tasks"
+                  :key="task.id"
+                  class="space-y-2"
                 >
-                  <transition
-                    enter-active-class="transition-all duration-300 ease-out"
-                    leave-active-class="transition-all duration-300 ease-in"
-                    enter-from-class="opacity-0 -translate-y-4"
-                    enter-to-class="opacity-100 translate-y-0"
-                    leave-from-class="opacity-100 translate-y-0"
-                    leave-to-class="opacity-0 -translate-y-4"
+                  <div
+                    class="p-4 rounded-lg transform hover:scale-[1.01]
+                           backdrop-blur-md bg-white/80 dark:bg-slate-800/40
+                           border border-transparent hover:border-blue-500/20
+                           shadow-sm hover:shadow-xl transition-all duration-300
+                           animate-slide-in h-[72px]"
                   >
-                    <div v-show="!collapsedTasks.has(task.id)">
-                      <div
-                        class="space-y-3 max-h-[300px] overflow-y-auto pr-2
-                               scrollbar-thin scrollbar-thumb-blue-500/20
-                               scrollbar-track-transparent hover:scrollbar-thumb-blue-500/30
-                               dark:scrollbar-thumb-blue-400/20
-                               dark:hover:scrollbar-thumb-blue-400/30"
-                      >
-                        <div
-                          v-for="step in task.steps"
-                          :key="step.id"
-                          class="flex items-center justify-between px-4 py-2 rounded-md
-                                 bg-white/50 dark:bg-slate-800/30
-                                 hover:bg-white/70 dark:hover:bg-slate-800/50
-                                 transition-all duration-200"
+                    <div class="flex items-center justify-between gap-4 h-full">
+                      <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <button
+                          class="flex-shrink-0 w-5 h-5 rounded border-2
+                                 transition-colors duration-200
+                                 flex items-center justify-center"
+                          :class="[
+                            task.completed
+                              ? 'bg-blue-500 border-blue-500 dark:bg-blue-400 dark:border-blue-400'
+                              : 'border-gray-300 dark:border-gray-600',
+                          ]"
+                          @click="(e) => toggleTaskComplete(task.id, e)"
                         >
-                          <span class="text-sm dark:text-blue-200 flex-1">
-                            {{ step.content }}
-                            <span
-                              v-if="isTyping && step.id === task.steps[task.steps.length - 1]?.id"
-                              class="animate-pulse ml-0.5"
-                            >|</span>
-                          </span>
-                          <button
-                            v-if="!isTyping"
-                            class="text-red-500 hover:text-red-700
-                                   dark:text-red-400 dark:hover:text-red-300
-                                   transition-all duration-200 ml-2"
-                            @click="deleteStep(task.id, step.id)"
-                          >
-                            <div class="i-carbon-trash-can text-sm" />
-                          </button>
-                        </div>
+                          <div
+                            v-if="task.completed"
+                            class="i-carbon-checkmark text-white text-sm"
+                          />
+                        </button>
+                        <span
+                          class="text-sm sm:text-base truncate dark:text-blue-100
+                                  transition-colors duration-200 line-clamp-2"
+                          :class="{ 'line-through text-gray-400 dark:text-gray-500': task.completed }"
+                        >
+                          {{ task.content }}
+                        </span>
+                      </div>
+
+                      <div class="flex items-center gap-2">
+                        <button
+                          v-if="task.steps.length > 0"
+                          class="p-1.5 rounded-full transition-all duration-200
+                                 text-blue-500 hover:text-blue-600
+                                 dark:text-blue-400 dark:hover:text-blue-300
+                                 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                          @click="toggleCollapse(task.id)"
+                        >
+                          <div
+                            class="text-lg" :class="[
+                              collapsedTasks.has(task.id)
+                                ? 'i-carbon-chevron-down'
+                                : 'i-carbon-chevron-up',
+                            ]"
+                          />
+                        </button>
+                        <button
+                          v-if="!task.steps.length"
+                          class="p-1.5 rounded-full transition-all duration-200"
+                          :disabled="isTyping"
+                          :title="isTyping ? '生成中...' : '生成步骤'"
+                          @click="generateSteps(task.id)"
+                        >
+                          <div
+                            class="i-carbon-list-checked text-lg"
+                            :class="{ 'animate-spin': isTyping }"
+                          />
+                        </button>
+                        <button
+                          class="p-1.5 rounded-full transition-all duration-200"
+                          @click="deleteTask(task.id)"
+                        >
+                          <div class="i-carbon-trash-can text-lg" />
+                        </button>
                       </div>
                     </div>
-                  </transition>
+                  </div>
+
+                  <div
+                    v-if="task.steps.length > 0"
+                    class="ml-8"
+                  >
+                    <transition
+                      enter-active-class="transition-all duration-300 ease-out"
+                      leave-active-class="transition-all duration-300 ease-in"
+                      enter-from-class="opacity-0 -translate-y-4"
+                      enter-to-class="opacity-100 translate-y-0"
+                      leave-from-class="opacity-100 translate-y-0"
+                      leave-to-class="opacity-0 -translate-y-4"
+                    >
+                      <div
+                        v-show="!collapsedTasks.has(task.id)"
+                        class="p-4 rounded-lg bg-white/50 dark:bg-slate-800/30"
+                      >
+                        <div
+                          class="space-y-3 max-h-[300px] overflow-y-auto pr-2
+                                 scrollbar-thin scrollbar-thumb-blue-500/20
+                                 scrollbar-track-transparent hover:scrollbar-thumb-blue-500/30
+                                 dark:scrollbar-thumb-blue-400/20
+                                 dark:hover:scrollbar-thumb-blue-400/30"
+                        >
+                          <div
+                            v-for="step in task.steps"
+                            :key="step.id"
+                            class="flex items-center justify-between px-4 py-2 rounded-md
+                                   bg-white/50 dark:bg-slate-800/30
+                                   hover:bg-white/70 dark:hover:bg-slate-800/50
+                                   transition-all duration-200"
+                          >
+                            <span class="text-sm dark:text-blue-200 flex-1">
+                              {{ step.content }}
+                              <span
+                                v-if="isTyping && step.id === task.steps[task.steps.length - 1]?.id"
+                                class="animate-pulse ml-0.5"
+                              >|</span>
+                            </span>
+                            <button
+                              v-if="!isTyping"
+                              class="text-red-500 hover:text-red-700
+                                     dark:text-red-400 dark:hover:text-red-300
+                                     transition-all duration-200 ml-2"
+                              @click="deleteStep(task.id, step.id)"
+                            >
+                              <div class="i-carbon-trash-can text-sm" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </transition>
+                  </div>
                 </div>
-              </div>
+              </TransitionGroup>
             </div>
           </div>
         </div>
       </div>
     </div>
+
+    <ConfettiExplosion ref="confettiRef" />
   </div>
 </template>
 
@@ -611,5 +643,71 @@ input {
 /* 禁用文本选择，优化拖拽体验 */
 .cursor-move {
   @apply select-none;
+}
+
+/* 背景渐变动画 */
+@keyframes gradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient 15s ease infinite;
+}
+
+/* 任务列表动画 */
+.task-list-enter-active,
+.task-list-leave-active {
+  transition: all 0.5s ease;
+}
+
+.task-list-enter-from {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.task-list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+/* 任务卡片滑入动画 */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.5s ease-out forwards;
+}
+
+/* 按钮悬浮特效 */
+button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px -10px rgba(0, 0, 0, 0.2);
+}
+
+button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* 添加多行文本截断样式 */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 </style>

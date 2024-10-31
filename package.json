@@ -15,7 +15,7 @@
     "openai": "^4.69.0",
     "uuid": "^11.0.2",
     "vue": "^3.5.12",
-    "vuedraggable": "^2.24.3"
+    "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^3.8.0",
