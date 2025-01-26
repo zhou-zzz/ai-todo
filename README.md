@@ -46,5 +46,7 @@ VITE_DEEPSEEK_API_KEY=your_api_key
 ```bash
 pnpm dev
 ```
-![image](./public/demo.png)
-![image](./public/demo2.png)
+
+5. 预览
+<img src="./public/demo.png" alt="演示截图1" width="300" />
+<img src="./public/demo2.png" alt="演示截图2" width="300" />
